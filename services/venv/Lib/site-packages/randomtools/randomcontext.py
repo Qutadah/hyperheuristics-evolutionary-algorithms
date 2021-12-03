@@ -1,0 +1,28 @@
+
+from __future__ import absolute_import, division, print_function
+import random
+
+__all__ = ['RandomContext']
+
+
+class RandomContext(object):
+    """Fun context.
+
+    Examples
+    --------
+    A simple example::
+
+        >>> from randomtools import RandomContext
+        >>> with RandomContext(1234):
+        ...     print(random.random())
+        0.9664535356921388
+    """
+    def __init__(self, seed):
+        self._seed = seed
+
+    def __enter__(self):
+        self._oldstate = random.getstate()
+        random.seed(self._seed)
+
+    def __exit__(self, *args, **kwargs):
+        random.setstate(self._oldstate)
