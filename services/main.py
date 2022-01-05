@@ -3,8 +3,12 @@ import random
 import math
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.express as px
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import datetime
+from datetime import timedelta
 import csv
 #import functools.reduce
 
@@ -51,7 +55,13 @@ global V
 V = 80
 
 def coordinates(services):
+    """
 
+    :param services:
+    :type services: dictionary
+    :return: locations
+    :rtype: array
+    """
     # global locations
     locations = distances = []
 
@@ -63,6 +73,13 @@ def coordinates(services):
     return locations
 
 def euclidean_distances(loc):
+    """
+
+    :param loc: location
+    :type loc: coordinates
+    :return: distances
+    :rtype: distance (meter)
+    """
     n = 0
     a = np.array(loc)
     b = a.reshape(a.shape[0], 1, a.shape[1])
@@ -70,8 +87,13 @@ def euclidean_distances(loc):
     return np.sqrt(np.einsum('ijk, ijk->ij', a - b, a - b))
 
 def worker_order_list(solution):
-    # global r1, r2, r3
+    """
 
+    :param solution:
+    :type solution:
+    :return:
+    :rtype:
+    """
     r1 = []
     r2 = []
     r3 = []
@@ -90,7 +112,19 @@ def worker_order_list(solution):
 
 
 def worker_day_list(r1, r2, r3, solution):
-    # global r1_days, r2_days, r3_days
+    """
+
+    :param r1:
+    :type r1:
+    :param r2:
+    :type r2:
+    :param r3:
+    :type r3:
+    :param solution:
+    :type solution:
+    :return:
+    :rtype:
+    """
 
     r1_days = []
     r2_days = []
@@ -104,6 +138,15 @@ def worker_day_list(r1, r2, r3, solution):
 
 
 def assign_schedule(rx, rx_days):
+    """
+
+    :param rx:
+    :type rx:
+    :param rx_days:
+    :type rx_days:
+    :return:
+    :rtype:
+    """
     d1 = []
     d2 = []
     d3 = []
@@ -127,21 +170,50 @@ def assign_schedule(rx, rx_days):
     return rx_schedule
 
 
-def travel_distance(rx_schedule):
+def travel_distance(rx_schedule, distanceToFirstOrder = 0, LAST_ORDER = 21):
+    """
+
+    :param rx_schedule:
+    :type rx_schedule:
+    :param distanceToFirstOrder:
+    :type distanceToFirstOrder:
+    :param LAST_ORDER:
+    :type LAST_ORDER:
+    :return:
+    :rtype:
+    """
     # global total_distance
-    distanceToFirstOrder = 0
     daily_distances = []
+
+    ## Gantt Chart
+    ganttChartTimesDay = []
+    ## Gantt Chart
 
     for day in range(len(rx_schedule)):
         total_distance = 0
+
+        ## Gantt Chart
+        firstOrderTime = 8  ## stunden
+        startTimesDay = []
+        ## Gantt Chart
+
         try:
             firstOrderinDay = rx_schedule[day][0]
             distanceToFirstOrder = distances_matrix[firstOrderinDay][21]  # initial distance to first order on day-x
+
+            ##### Gantt Chart
+
+            firstOrderTime = 8 + distanceToFirstOrder / V
+            startTimesDay.append(firstOrderTime)
+
+            ###### Gantt Chart
 
             total_distance += distanceToFirstOrder
 
             # print("day", day,"\nfirst order is", firstOrderinDay,"and the distance to that order from center is", distanceToFirstOrder)
             # print("now total distance ist", total_distance)
+
+            nextOrderStartTime = firstOrderTime
 
             for order in range(len(rx_schedule[day])):
 
@@ -152,19 +224,37 @@ def travel_distance(rx_schedule):
                     total_distance += distances_matrix[current][next]  # update total_distance.
                     # print("now total distance ist", total_distance)
 
+                    ## Gantt Chart
+
+                    nextOrderStartTime += distances_matrix[current][next] / V + services[str(order)][0][3]
+                    startTimesDay.append(nextOrderStartTime)
+
+                    #### Gantt Chart
+
                     # put value of index after it ..
 
                 except:
                     current = rx_schedule[day][order]  # current order number
-                    LAST_ORDER = 21
                     # print("last order, distance between order", current, "and center", next, "is", distances_matrix[current][next])
                     total_distance += distances_matrix[current][LAST_ORDER]  # update total_distance.
                     # print("now total distance ist", total_distance)
+
+                    ## Gantt Chart
+
+                    ganttChartTimesDay.append(startTimesDay)
+
+                    ## Gantt Chart
+
             daily_distances.append(total_distance)
             #######print("\n")
 
         except:
             daily_distances.append(0)
+
+            ## Gantt Chart
+            ganttChartTimesDay.append([])      # no orders in the day
+            ## Gantt Chart
+
             continue
             # print("for the day", day, "there are no orders for this worker, free day!")
             # print("now total distance ist", total_distance)
@@ -175,7 +265,7 @@ def travel_distance(rx_schedule):
 
     total_d = sum(daily_distances)
 
-    return total_d, daily_distances
+    return total_d, daily_distances, ganttChartTimesDay
 
 
 def daily_time(rx_schedule):  # insert try loops cause it might be empty lists.
@@ -194,6 +284,7 @@ def daily_time(rx_schedule):  # insert try loops cause it might be empty lists.
             try:
                 # print(j)
                 service_time += services[str(_)][0][3]
+
             except:
                 continue
 
@@ -206,8 +297,7 @@ def daily_time(rx_schedule):  # insert try loops cause it might be empty lists.
     return [daily_time_worker, sum_tp]  # type list
 
 
-def travel_cost(rx_schedule):
-    TRAVEL_COST_HOUR = 60  # €/h;
+def travel_cost(rx_schedule, TRAVEL_COST_HOUR = 60):     # €/h;
 
     # we need to extract this variable from previous function but how?
 
@@ -220,25 +310,22 @@ def travel_cost(rx_schedule):
 
     return travel_cost
 
-def total_cost(rx, rx_schedule, Lohn):
-    total_Cost = 0
-
+def total_cost(rx, rx_schedule, Lohn, total_Cost = 0):
     for _ in range(len(rx)):
         total_Cost += (services[str(rx[_])][0][3] * Lohn)  # this is cost of each of the orders. time* pay of the worker
 
     total_Cost += travel_cost(rx_schedule)
 
     # time elapsed in each order of the schedule
-
     return total_Cost
 
-global R1_SALARY
-global R2_SALARY
-global R3_SALARY
+global CONST_R1_SALARY
+global CONST_R2_SALARY
+global CONST_R3_SALARY
 
-R1_SALARY = 80
-R2_SALARY = 60
-R3_SALARY = 60
+CONST_R1_SALARY = 80
+CONST_R2_SALARY = 60
+CONST_R3_SALARY = 60
 
 
 def fitness_cost(solution):
@@ -263,9 +350,9 @@ def fitness_cost(solution):
     r2_travel_cost = travel_cost(r2_schedule)
     r3_travel_cost = travel_cost(r3_schedule)
 
-    r1_total_cost = total_cost(r1, r1_schedule, R1_SALARY)
-    r2_total_cost = total_cost(r2, r2_schedule, R2_SALARY)
-    r3_total_cost = total_cost(r3, r3_schedule, R3_SALARY)
+    r1_total_cost = total_cost(r1, r1_schedule, CONST_R1_SALARY)
+    r2_total_cost = total_cost(r2, r2_schedule, CONST_R2_SALARY)
+    r3_total_cost = total_cost(r3, r3_schedule, CONST_R3_SALARY)
 
     fitness = r1_total_cost + r2_total_cost + r3_total_cost
 
@@ -326,9 +413,9 @@ def fitness_function(solution, c_min, c_max_op):  # formulas defined in Finke pa
     r2_travel_cost = travel_cost(r2_schedule)
     r3_travel_cost = travel_cost(r3_schedule)
 
-    r1_total_cost = total_cost(r1, r1_schedule, R1_SALARY)
-    r2_total_cost = total_cost(r2, r2_schedule, R2_SALARY)
-    r3_total_cost = total_cost(r3, r3_schedule, R3_SALARY)
+    r1_total_cost = total_cost(r1, r1_schedule, CONST_R1_SALARY)
+    r2_total_cost = total_cost(r2, r2_schedule, CONST_R2_SALARY)
+    r3_total_cost = total_cost(r3, r3_schedule, CONST_R3_SALARY)
 
     fitness = r1_total_cost + r2_total_cost + r3_total_cost
 
@@ -350,23 +437,23 @@ def fitness_function(solution, c_min, c_max_op):  # formulas defined in Finke pa
         end = new_list[_][1]  # ist termin
 
         st = new_list[_][1]  # verfrühten Starttermin
-        TH = 5  # planungshorizont
+        CONST_TH = 5  # planungshorizont
 
         def dl_op(est, st, end, due):  # Operativen Ressourcenplanung.. also Gewichtungsfaktor?
 
             if st < est:
                 try:
-                    return (est - st) / (2 * TH)  #careful, if due =est --- division by zero
+                    return (est - st) / (2 * CONST_TH)  #careful, if due =est --- division by zero
                 except ZeroDivisionError:
                     print("Error dividing by zero, if block")
             elif st >= est and end <= due:
                 return 0
             else:
-                return (end - due) / TH
+                return (end - due) / CONST_TH
 
         dl_op = dl_op(est, st, end, due)
 
-        wt_op = TH / (TH + 2 * st)  # Gewichtung
+        wt_op = CONST_TH / (CONST_TH + 2 * st)  # Gewichtung
 
         w = services[str(order)][0][10]  # prozesswichtigkeit from dictionary
 
@@ -477,13 +564,13 @@ def fitness_function(solution, c_min, c_max_op):  # formulas defined in Finke pa
 
     # total must be 1, Gewichtungsfaktoren vom Kennzahlen
 
-    wz = 0.5
-    wa = 0.3
-    wc = 0.2
+    CONST_wz = 0.5
+    CONST_wa = 0.3
+    CONST_wc = 0.2
 
-    zw  = zi  + ((1 -  wz) * (1 - zi))
-    aw  = ai_op  + ((1 -  wa) * (1 - ai_op))
-    cew = cei + ((1 -  wc) * (1 - cei))
+    zw  = zi  + ((1 -  CONST_wz) * (1 - zi))
+    aw  = ai_op  + ((1 -  CONST_wa) * (1 - ai_op))
+    cew = cei + ((1 -  CONST_wc) * (1 - cei))
 
     # ------------------- Operational Gesamt Fitness -------------------------------------
     f_op = fitness * zw * cew  * aw
@@ -694,7 +781,32 @@ distances_matrix
 solution_best = genetic(domain, fitness_function)[1]
 
 
-def print_function(solution):  # why is my function not changing parameters ????
+######################################  Dictionary Entries ####################################
+
+# 1- worker id (Resource)
+# 2- Task Number (Order number from schedule)
+
+##### START and FINISH of Orders ######
+
+# 3- START times of service orders (timeline format).
+# 4- FINISH times of service orders (timeline format).
+
+####### - START AND FINISH OF Travel times represented by the gaps between end of an order and start of next order. #######
+
+# 5- START of next service order (timeline format).
+# 6- FINISH of previous service order (timeline format).
+
+def serviceTimes(rx_schedule):
+    serviceTimesArray = []
+    for day in rx_schedule:
+        dayServiceTimes = []
+        for order in day:
+            dayServiceTimes.append(services[str(order)][0][3])
+        serviceTimesArray.append(dayServiceTimes)
+
+    return serviceTimesArray
+
+def print_function(solution):
 
     r1 = worker_order_list(solution)[0]
     r2 = worker_order_list(solution)[1]
@@ -708,19 +820,260 @@ def print_function(solution):  # why is my function not changing parameters ????
     r2_schedule = assign_schedule(r2, r2_days)
     r3_schedule = assign_schedule(r3, r3_days)
 
-    schedules = ["r1_schedule", r1_schedule, "r2_schedule", r2_schedule, "r3_schedule", r3_schedule]
+    schedules = [r1_schedule, r2_schedule, r3_schedule]
 
-    #  for i in schedules:
-    #   print(i)
+    ############################################ Gantt Chart #####################################
 
-    return schedules
+    startTimes_R1 = travel_distance(r1_schedule, distanceToFirstOrder=0, LAST_ORDER=21)[2]
+    startTimes_R2 = travel_distance(r2_schedule, distanceToFirstOrder=0, LAST_ORDER=21)[2]
+    startTimes_R3 = travel_distance(r3_schedule, distanceToFirstOrder=0, LAST_ORDER=21)[2]
 
-    ##function is taking old values and results why??
+    serviceTimes(r1_schedule)
+    serviceTimes(r2_schedule)
+    serviceTimes(r3_schedule)
 
-a = print_function(solution_best)
-print(a)
+    ################### End times - worker R1 ########################
+    endTimes_R1 = []
+
+    for i in range(len(r1_schedule)):
+        endTimes = []
+        for x in range(len(r1_schedule[i])):
+            endTimes.append(startTimes_R1[i][x] + serviceTimes(r1_schedule)[i][x])
+        endTimes_R1.append(endTimes)
+
+    ################### End times - worker R2 ########################
+    endTimes_R2 = []
+
+    for i in range(len(r2_schedule)):
+        endTimes = []
+        for x in range(len(r2_schedule[i])):
+            endTimes.append(startTimes_R2[i][x] + serviceTimes(r2_schedule)[i][x])
+        endTimes_R2.append(endTimes)
+
+    ################### End times - worker R3 ########################
+    endTimes_R3 = []
+
+    for i in range(len(r3_schedule)):
+        endTimes = []
+        for x in range(len(r3_schedule[i])):
+            endTimes.append(startTimes_R3[i][x] + serviceTimes(r3_schedule)[i][x])
+        endTimes_R3.append(endTimes)
 
 
-print("--- %s seconds ---" % (time.time() - start_time))
+    ############################### Gantt Chart ####################
+
+    return schedules, startTimes_R1, startTimes_R2, startTimes_R3, endTimes_R1, endTimes_R2, endTimes_R3
 
 
+###### How to Convert Integer to Datetime in Pandas DataFrame? ##################
+
+############# Convert all integer Times to Datetime in PANDAS: from dataframes to "to_dict" ###################
+
+
+#print("--- %s seconds ---" % (time.time() - start_time))
+
+###################################### make for loop to put all arrays of 5 arrays in 1 list only. #####################################
+
+returnPrintFunction = print_function(solution_best)
+
+r1_schedule= returnPrintFunction[0][0]
+r2_schedule= returnPrintFunction[0][1]
+r3_schedule= returnPrintFunction[0][2]
+
+############################### r1_List , r1_Days_List #########################
+
+# Define days 0-4 sa dates...
+
+r1_List = []
+r1_Days_List= []
+
+for i in range(len(r1_schedule)):
+    for x in range(len(r1_schedule[i])):
+        r1_List.append(r1_schedule[i][x])
+        r1_Days_List.append(solution_best[r1_schedule[i][x]])
+
+r1_List =  [str(int) for int in r1_List]
+r1_Days_List = [str(int) for int in r1_Days_List]
+
+string = 'Order'
+r1ListDict = list(map(lambda orig_string: string + ' ' + orig_string, r1_List))
+
+print("r1ListDict", r1ListDict)
+
+############################### r2_List , r2_Days_List #########################
+
+r2_List = []
+r2_Days_List= []
+
+for i in range(len(r2_schedule)):
+    for x in range(len(r2_schedule[i])):
+        r2_List.append(r2_schedule[i][x])
+        r2_Days_List.append(solution_best[r2_schedule[i][x]])
+
+r2_List =  [str(int) for int in r2_List]
+r2_Days_List = [str(int) for int in r2_Days_List]
+
+string = 'Order'
+r2ListDict = list(map(lambda orig_string: string + ' ' + orig_string, r2_List))
+
+print("r2ListDict", r2ListDict)
+
+############################### r3_List , r3_Days_List #########################
+
+r3_List = []
+r3_Days_List= []
+
+for i in range(len(r3_schedule)):
+    for x in range(len(r3_schedule[i])):
+        r3_List.append(r3_schedule[i][x])
+        r3_Days_List.append(solution_best[r3_schedule[i][x]])
+
+r3_List =  [str(int) for int in r3_List]
+r3_Days_List = [str(int) for int in r3_Days_List]
+
+string = 'Order'
+r3ListDict = list(map(lambda orig_string: string + ' ' + orig_string, r3_List))
+
+print("r3ListDict", r3ListDict)
+
+############################ day Code to dateTime #########################################
+
+def dateTimeDaysList(rx_Days_List):
+    for i in range(len(rx_Days_List)):
+        if rx_Days_List[i] == "0":
+            rx_Days_List[i] = "2020-04-06"
+        if rx_Days_List[i] == "1":
+            rx_Days_List[i] = "2020-04-07"
+        if rx_Days_List[i] == "2":
+            rx_Days_List[i] = "2020-04-08"
+        if rx_Days_List[i] == "3":
+            rx_Days_List[i] = "2020-04-09"
+        if rx_Days_List[i] == "4":
+            rx_Days_List[i] = "2020-04-10"
+    return rx_Days_List
+
+dateTimeDaysListR1 = dateTimeDaysList(r1_Days_List)
+dateTimeDaysListR2 = dateTimeDaysList(r2_Days_List)
+dateTimeDaysListR3 = dateTimeDaysList(r3_Days_List)
+
+############################ startTimes_Rx / EndTimes_Rx ##################################
+
+startTimes_R1 = returnPrintFunction[1]
+startTimes_R2 = returnPrintFunction[2]
+startTimes_R3 = returnPrintFunction[3]
+
+endTimes_R1 = returnPrintFunction[4]
+endTimes_R2 = returnPrintFunction[5]
+endTimes_R3 = returnPrintFunction[6]
+
+############################## startTimesRx / endTimesRx ############################
+
+def times(times_Rx):
+    timesRx = []
+    for i in range(len(times_Rx)):
+        for x in range(len(times_Rx[i])):
+            timesRx.append(times_Rx[i][x])
+    return timesRx
+
+startTimesR1 = times(startTimes_R1)
+startTimesR2 = times(startTimes_R2)
+startTimesR3 = times(startTimes_R3)
+
+endTimesR1 = times(endTimes_R1)
+endTimesR2 = times(endTimes_R2)
+endTimesR3 = times(endTimes_R3)
+
+
+###################################### dateTimeStartTimesRx / dateTimeEndTimesRx  ############################################
+
+def dateTime(timesRx):
+    dateTimeRx = []
+
+    for time in timesRx:
+        result = '{0:02.0f}:{1:02.0f}'.format(*divmod(time * 60, 60))
+        dateTimeRx.append(str(result))
+
+    return dateTimeRx
+
+dateTimeStartTimesR1 = dateTime(startTimesR1)
+dateTimeStartTimesR2 = dateTime(startTimesR2)
+dateTimeStartTimesR3 = dateTime(startTimesR3)
+
+dateTimeEndTimesR1 = dateTime(endTimesR1)
+dateTimeEndTimesR2 = dateTime(endTimesR2)
+dateTimeEndTimesR3 = dateTime(endTimesR3)
+
+
+######## dateTimeOrderStartTimeRx for Gantt Chart (concatenate from dateTimeDaysListRx + dateTimeStartTimesRx) ##########
+
+dateTimeOrderStartTimeR1 = [dateTimeDaysListR1[i] + " " + dateTimeStartTimesR1[i] for i in range(len(dateTimeDaysListR1))]
+dateTimeOrderStartTimeR2 = [dateTimeDaysListR2[i] + " " + dateTimeStartTimesR2[i] for i in range(len(dateTimeDaysListR2))]
+dateTimeOrderStartTimeR3 = [dateTimeDaysListR3[i] + " " + dateTimeStartTimesR3[i] for i in range(len(dateTimeDaysListR3))]
+
+print("dateTimeOrderStartTimeR1", dateTimeOrderStartTimeR1)
+print("dateTimeOrderStartTimeR2", dateTimeOrderStartTimeR2)
+print("dateTimeOrderStartTimeR3", dateTimeOrderStartTimeR3)
+
+########## dateTimeOrderEndTimeRx for Gantt Chart (concatenate from dateTimeDaysListR1 + dateTimeEndTimesR1) #############
+
+dateTimeOrderEndTimeR1 = [dateTimeDaysListR1[i] + " " + dateTimeEndTimesR1[i] for i in range(len(dateTimeDaysListR1))]
+dateTimeOrderEndTimeR2 = [dateTimeDaysListR2[i] + " " + dateTimeEndTimesR2[i] for i in range(len(dateTimeDaysListR2))]
+dateTimeOrderEndTimeR3 = [dateTimeDaysListR3[i] + " " + dateTimeEndTimesR3[i] for i in range(len(dateTimeDaysListR3))]
+
+print("dateTimeOrderEndTimeR1", dateTimeOrderEndTimeR1)
+print("dateTimeOrderEndTimeR2", dateTimeOrderEndTimeR2)
+print("dateTimeOrderEndTimeR3", dateTimeOrderEndTimeR3)
+
+######################## RESOURCE LIST ############################
+
+#TODO we can remove it because its a constant and can be directly entered in Resource of dict: Gantt Chart
+
+r1List = ["R1" for i in range(len(r1ListDict))]
+r2List = ["R2" for i in range(len(r2ListDict))]
+r3List = ["R3" for i in range(len(r3ListDict))]
+
+print("r1List", r1List)
+print("r2List", r2List)
+print("r3List", r3List)
+
+#####################---------------------------- GANTT CHART ------------------------------###############
+# components:
+# 1- rxListDict
+# 2- rxList
+# 3- dateTimeOrderStartTimeRx
+# 4- dateTimeOrderEndTimeRx
+
+######################### Function for dict entries in each worker Gantt Chart. #########################
+
+
+
+###################################### Worker R1 ###################################################
+
+dict_R1 = ""
+dict_R2 = ""
+dict_R3 = ""
+
+#def Dictionary_Rx(dict_Rx, rxListDict, dateTimeOrderStartTimeRx, dateTimeOrderEndTimeRx, Rx):
+for i in range(len(r1ListDict)):
+    dict_R1 += "dict(Task = " + '\"'+ r1ListDict[i] + '\"' + ", Start = " + '\"'+ dateTimeOrderStartTimeR1[i] + '\"' + ", Finish = " + '\"' +  dateTimeOrderEndTimeR1[i] + '\"' + \
+    ", Resource= " + '\"'+ 'R1' +'\"' + ")" + ",\n"
+dict_R1 = dict_R1[:-2]
+#return dict_Rx
+
+for i in range(len(r2ListDict)):
+    dict_R2 += "dict(Task = " + '\"'+ r2ListDict[i] + '\"' + ", Start = " + '\"'+  dateTimeOrderStartTimeR2[i] + '\"' + ", Finish = " + '\"' + dateTimeOrderEndTimeR2[i] + '\"' + \
+    ", Resource= " + '\"'+ 'R2' + '\"' + ")" + ",\n"
+dict_R2 = dict_R2[:-2]
+
+for i in range(len(r3ListDict)):
+    dict_R3 += "dict(Task = " + '\"'+ r3ListDict[i] +'\"'+ ", Start = " + '\"'+ dateTimeOrderStartTimeR3[i] +'\"'+ ", Finish = " + '\"'+ dateTimeOrderEndTimeR3[i] + '\"' + \
+    ", Resource= " + '\"'+ 'R3' + '\"' + ")" + ",\n"
+dict_R3 = dict_R3[:-2]
+
+#dict_R1 = Dictionary_Rx(dict_R1, r1ListDict, dateTimeOrderStartTimeR1, dateTimeOrderEndTimeR1, "'R1'")
+#dict_R2 = Dictionary_Rx(dict_R2, r2ListDict, dateTimeOrderStartTimeR2, dateTimeOrderEndTimeR2, "'R2'")
+#dict_R3 = Dictionary_Rx(dict_R3, r3ListDict, dateTimeOrderStartTimeR3, dateTimeOrderEndTimeR3, "'R3'")
+
+print("dict_R1", dict_R1)
+print("dict_R2", dict_R2)
+print("dict_R3", dict_R3)

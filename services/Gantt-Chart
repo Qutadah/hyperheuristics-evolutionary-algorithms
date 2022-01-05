@@ -1,0 +1,47 @@
+import pandas as pd
+import plotly.express as px
+
+
+df = pd.DataFrame([
+    dict(Task = "Order 2", Start = "2020-04-06 11:16", Finish = "2020-04-06 14:31", Resource= "R1"),
+    dict(Task = "Order 12", Start = "2020-04-06 15:25", Finish = "2020-04-06 16:25", Resource= "R1"),
+    dict(Task = "Order 18", Start = "2020-04-07 10:28", Finish = "2020-04-07 11:13", Resource= "R1"),
+    dict(Task = "Order 10", Start = "2020-04-08 11:54", Finish = "2020-04-08 14:54", Resource= "R1"),
+    dict(Task = "Order 15", Start = "2020-04-08 14:43", Finish = "2020-04-08 15:13", Resource= "R1"),
+    dict(Task = "Order 8", Start = "2020-04-09 10:09", Finish = "2020-04-09 13:09", Resource= "R1"),
+    dict(Task = "Order 4", Start = "2020-04-10 10:14", Finish = "2020-04-10 11:59", Resource= "R1"),
+    dict(Task = "Order 5", Start = "2020-04-10 13:03", Finish = "2020-04-10 14:48", Resource= "R1")
+])
+fig = px.timeline(df, x_start="Start", x_end="Finish", y="Resource", color="Resource")
+fig.show()
+
+###################################### Worker R2 ###################################################
+
+
+df = pd.DataFrame([
+    dict(Task = "Order 13", Start = "2020-04-07 11:45", Finish = "2020-04-07 13:45", Resource= "R2"),
+    dict(Task = "Order 16", Start = "2020-04-08 09:48", Finish = "2020-04-08 12:03", Resource= "R2"),
+    dict(Task = "Order 11", Start = "2020-04-10 11:03", Finish = "2020-04-10 13:33", Resource= "R2")
+])
+
+fig = px.timeline(df, x_start="Start", x_end="Finish", y="Resource", color="Resource")
+fig.show()
+
+###################################### Worker R3 ###################################################
+
+df = pd.DataFrame([
+    dict(Task = "Order 6", Start = "2020-04-06 11:36", Finish = "2020-04-06 15:21", Resource= "R3"),
+    dict(Task = "Order 9", Start = "2020-04-06 15:52", Finish = "2020-04-06 18:52", Resource= "R3"),
+    dict(Task = "Order 14", Start = "2020-04-06 17:44", Finish = "2020-04-06 18:59", Resource= "R3"),
+    dict(Task = "Order 7", Start = "2020-04-07 10:00", Finish = "2020-04-07 10:45", Resource= "R3"),
+    dict(Task = "Order 20", Start = "2020-04-07 15:21", Finish = "2020-04-07 16:36", Resource= "R3"),
+    dict(Task = "Order 1", Start = "2020-04-08 10:14", Finish = "2020-04-08 10:59", Resource= "R3"),
+    dict(Task = "Order 3", Start = "2020-04-08 14:43", Finish = "2020-04-08 15:43", Resource= "R3"),
+    dict(Task = "Order 17", Start = "2020-04-08 16:30", Finish = "2020-04-08 19:00", Resource= "R3"),
+    dict(Task = "Order 0", Start = "2020-04-09 09:02", Finish = "2020-04-09 11:17", Resource= "R3"),
+    dict(Task = "Order 19", Start = "2020-04-09 13:18", Finish = "2020-04-09 14:03", Resource= "R3")
+])
+fig = px.timeline(df, x_start="Start", x_end="Finish", y="Resource", color="Resource")
+fig.show()
+
+#############################################################################################################
