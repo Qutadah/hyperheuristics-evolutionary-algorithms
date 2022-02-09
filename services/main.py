@@ -10,6 +10,7 @@ import matplotlib.dates as mdates
 import datetime
 from datetime import timedelta
 import csv
+from functools import cache, lru_cache     ##this is caching decorators we can directly use
 #import functools.reduce
 
 #from inliner import inline
@@ -51,9 +52,42 @@ services={
 
 #@inline
 
+############################### Caching to make code run faster ###################################
+
+
+#cache = {}
+
+def cache_wrapper(func):
+    # Add a dictionary for `func` in the cache
+    if not func in cache:
+        cache[func] = {}
+
+    # Create a new cached function
+    def cached_func(*args):
+        # If entry is cached, return from cache
+        if args in cache[func]:
+            return cache[func][args]
+
+        # If not, add it to cache and return it
+        value = func(*args)
+        cache[func][args] = value
+        return value
+
+    # Return our new cached function
+    return cached_func
+
+
+
+
+
+
 global V
 V = 80
 
+######## using a decorator to cache here #######
+
+#@cache_wrapper
+#@cache
 def coordinates(services):
     """
 
@@ -72,6 +106,7 @@ def coordinates(services):
     plt.scatter(*zip(* locations))
     return locations
 
+
 def euclidean_distances(loc):
     """
 
@@ -86,6 +121,10 @@ def euclidean_distances(loc):
 
     return np.sqrt(np.einsum('ijk, ijk->ij', a - b, a - b))
 
+###### Using a simple function call. ######
+#euclidean_distances(loc) = cache_wrapper(euclidean_distances(loc))
+
+#@lru_cache
 def worker_order_list(solution):
     """
 
