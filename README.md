@@ -3,5 +3,5 @@ Hyperheuristic algorithms for traveling salesman problem, Bubble-breaker game. A
 
 ## Code Optimization (In progress):
 
-** adding cache function- added but not working for some reason
-** convert all array manipulation and use Numpy, (Numpy was not used, I know stupid!)
+* adding cache function- added but not working for some reason
+* convert all array manipulation and use Numpy, (Numpy was not used, I know stupid!)
