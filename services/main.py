@@ -1116,3 +1116,7 @@ dict_R3 = dict_R3[:-2]
 print("dict_R1", dict_R1)
 print("dict_R2", dict_R2)
 print("dict_R3", dict_R3)
+
+
+#if __name__ == '__main__':
+ #   main()
